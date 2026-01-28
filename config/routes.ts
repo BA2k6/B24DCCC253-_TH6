@@ -37,6 +37,20 @@
 		icon: 'ArrowsAltOutlined',
 	},
 
+	{
+		path: '/doan-so',
+		name: 'Bài 1: Đoán số',
+		component: './DoanSo',
+		icon: 'AimOutlined',
+	},
+
+	{
+		path: '/todo-list',
+		name: 'Bài 2: TodoList',
+		component: './TodoList',
+		icon: 'UnorderedListOutlined',
+	},
+
 	// DANH MUC HE THONG
 	// {
 	// 	name: 'DanhMuc',
