@@ -51,7 +51,7 @@
 	// 	icon: 'UnorderedListOutlined',
 	// },
 	// {
-		path: '/travel-planner',
+	{	path: '/travel-planner',
 		name: 'Travel Planner',
 		icon: 'CompassOutlined',
 		routes: [
