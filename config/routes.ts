@@ -37,20 +37,20 @@
 		icon: 'ArrowsAltOutlined',
 	},
 
-	{
-		path: '/doan-so',
-		name: 'Bài 1: Đoán số',
-		component: './DoanSo',
-		icon: 'AimOutlined',
-	},
+	// {
+	// 	path: '/doan-so',
+	// 	name: 'Bài 1: Đoán số',
+	// 	component: './DoanSo',
+	// 	icon: 'AimOutlined',
+	// },
 
-	{
-		path: '/todo-list',
-		name: 'Bài 2: TodoList',
-		component: './TodoList',
-		icon: 'UnorderedListOutlined',
-	},
-	{
+	// {
+	// 	path: '/todo-list',
+	// 	name: 'Bài 2: TodoList',
+	// 	component: './TodoList',
+	// 	icon: 'UnorderedListOutlined',
+	// },
+	// {
 		path: '/travel-planner',
 		name: 'Travel Planner',
 		icon: 'CompassOutlined',
