@@ -1,94 +1,160 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Task, TaskStatus } from '../types';
+import { taskService } from '../services/task.service';
 
-const STORAGE_KEY = 'groupTasks';
+/**
+ * Sinh ID đơn giản
+ */
+const generateId = () => Date.now().toString();
 
-const getStoredTasks = (): Task[] => {
-	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return [];
-		const parsed = JSON.parse(raw) as Task[];
-		return Array.isArray(parsed) ? parsed : [];
-	} catch {
-		return [];
-	}
-};
+/**
+ * Chuẩn hóa text để search
+ */
+const normalize = (text: string) => text.toLowerCase().trim();
 
-const saveTasks = (tasks: Task[]) => {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-};
+/**
+ * Check task quá hạn
+ */
+const isOverdue = (deadline: string) =>
+  new Date(deadline).getTime() < Date.now();
 
 export const useGroupTasks = (currentUserName: string) => {
-	const [tasks, setTasks] = useState<Task[]>([]);
-	const [search, setSearch] = useState('');
-	const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
-	const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(false);
 
-	useEffect(() => {
-		setTasks(getStoredTasks());
-	}, []);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
 
-	useEffect(() => {
-		saveTasks(tasks);
-	}, [tasks]);
+  /* =========================
+     FETCH DATA
+  ========================= */
+  const fetchTasks = async () => {
+    setLoading(true);
+    const data = await taskService.getTasks();
+    setTasks(data);
+    setLoading(false);
+  };
 
-	const addTask = (task: Omit<Task, 'id' | 'createdAt' | 'createdBy'>) => {
-		const nextTask: Task = {
-			...task,
-			id: `${Date.now()}`,
-			createdAt: new Date().toISOString(),
-			createdBy: currentUserName || 'Khách',
-		};
-		setTasks((prev) => [nextTask, ...prev]);
-	};
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
-	const updateTask = (id: string, updates: Partial<Task>) => {
-		setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, ...updates } : task)));
-	};
+  /* =========================
+     CRUD (GIỐNG CALL API)
+  ========================= */
 
-	const deleteTask = (id: string) => {
-		setTasks((prev) => prev.filter((task) => task.id !== id));
-	};
+  const addTask = async (
+    task: Omit<Task, 'id' | 'createdAt' | 'createdBy'>
+  ) => {
+    const newTask: Task = {
+      ...task,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      createdBy: currentUserName || 'Khách',
+    };
 
-	const filteredTasks = useMemo(() => {
-		return tasks.filter((task) => {
-			const matchesSearch = task.title.toLowerCase().includes(search.trim().toLowerCase());
-			const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-			const matchesAssignee = assigneeFilter === 'all' || task.assignee === assigneeFilter;
-			return matchesSearch && matchesStatus && matchesAssignee;
-		});
-	}, [tasks, search, statusFilter, assigneeFilter]);
+    await taskService.createTask(newTask);
+    fetchTasks();
+  };
 
-	const assignedToMeTasks = useMemo(() => {
-		return tasks.filter((task) => task.assignee === currentUserName);
-	}, [tasks, currentUserName]);
+  const updateTask = async (id: string, updates: Partial<Task>) => {
+    await taskService.updateTask(id, updates);
+    fetchTasks();
+  };
 
-	const assignees = useMemo(() => {
-		const unique = Array.from(new Set(tasks.map((task) => task.assignee))).filter(Boolean);
-		if (currentUserName && !unique.includes(currentUserName)) {
-			unique.unshift(currentUserName);
-		}
-		return unique.sort((a, b) => a.localeCompare(b));
-	}, [tasks, currentUserName]);
+  const deleteTask = async (id: string) => {
+    await taskService.deleteTask(id);
+    fetchTasks();
+  };
 
-	const totalCount = tasks.length;
-	const completedCount = tasks.filter((task) => task.status === 'Đã xong').length;
+  /* =========================
+     DERIVED DATA
+  ========================= */
 
-	return {
-		tasks,
-		filteredTasks,
-		assignedToMeTasks,
-		addTask,
-		updateTask,
-		deleteTask,
-		search,
-		setSearch,
-		statusFilter,
-		setStatusFilter,
-		assigneeFilter,
-		setAssigneeFilter,
-		assignees,
-		totalCount,
-		completedCount,
-	};
+  const sortedTasks = useMemo(() => {
+    return [...tasks].sort(
+      (a, b) =>
+        new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    );
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    return sortedTasks.filter((task) => {
+      const matchesSearch = normalize(task.title).includes(normalize(search));
+      const matchesStatus =
+        statusFilter === 'all' || task.status === statusFilter;
+      const matchesAssignee =
+        assigneeFilter === 'all' || task.assignee === assigneeFilter;
+
+      return matchesSearch && matchesStatus && matchesAssignee;
+    });
+  }, [sortedTasks, search, statusFilter, assigneeFilter]);
+
+  const assignedToMeTasks = useMemo(
+    () => tasks.filter((t) => t.assignee === currentUserName),
+    [tasks, currentUserName]
+  );
+
+  const assignees = useMemo(() => {
+    const unique = Array.from(new Set(tasks.map((t) => t.assignee)));
+
+    if (currentUserName && !unique.includes(currentUserName)) {
+      unique.unshift(currentUserName);
+    }
+
+    return unique.sort();
+  }, [tasks, currentUserName]);
+
+  /* =========================
+     STATS
+  ========================= */
+
+  const totalCount = tasks.length;
+
+  const completedCount = tasks.filter(
+    (t) => t.status === 'Đã xong'
+  ).length;
+
+  const overdueCount = tasks.filter(
+    (t) => isOverdue(t.deadline) && t.status !== 'Đã xong'
+  ).length;
+
+  const completionPercent =
+    totalCount === 0
+      ? 0
+      : Math.round((completedCount / totalCount) * 100);
+
+  /* =========================
+     RETURN
+  ========================= */
+
+  return {
+    tasks,
+    filteredTasks,
+    assignedToMeTasks,
+
+    // CRUD
+    addTask,
+    updateTask,
+    deleteTask,
+
+    // UI state
+    loading,
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    assigneeFilter,
+    setAssigneeFilter,
+
+    // data
+    assignees,
+
+    // stats
+    totalCount,
+    completedCount,
+    overdueCount,
+    completionPercent,
+  };
 };
