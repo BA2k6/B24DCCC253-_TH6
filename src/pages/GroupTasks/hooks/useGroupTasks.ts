@@ -2,19 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Task, TaskStatus } from '../types';
 import { taskService } from '../services/task.service';
 
-/**
- * Sinh ID đơn giản
- */
 const generateId = () => Date.now().toString();
 
-/**
- * Chuẩn hóa text để search
- */
 const normalize = (text: string) => text.toLowerCase().trim();
 
-/**
- * Check task quá hạn
- */
 const isOverdue = (deadline: string) =>
   new Date(deadline).getTime() < Date.now();
 
@@ -26,9 +17,6 @@ export const useGroupTasks = (currentUserName: string) => {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
 
-  /* =========================
-     FETCH DATA
-  ========================= */
   const fetchTasks = async () => {
     setLoading(true);
     const data = await taskService.getTasks();
@@ -39,10 +27,6 @@ export const useGroupTasks = (currentUserName: string) => {
   useEffect(() => {
     fetchTasks();
   }, []);
-
-  /* =========================
-     CRUD (GIỐNG CALL API)
-  ========================= */
 
   const addTask = async (
     task: Omit<Task, 'id' | 'createdAt' | 'createdBy'>

@@ -1,19 +1,7 @@
 import type { Task } from '../types';
 
-/**
- * Key lưu trữ trong localStorage
- */
 const STORAGE_KEY = 'GROUP_TASKS_DB';
-
-/**
- * Giả lập delay giống API thật
- */
 const sleep = (ms = 200) => new Promise((res) => setTimeout(res, ms));
-
-/* =========================
-   FIXED DATABASE (HARD CODE)
-========================= */
-
 const FIXED_DB: Task[] = [
   {
     id: '1',
@@ -70,26 +58,19 @@ const FIXED_DB: Task[] = [
     title: 'Viết tài liệu',
     assignee: 'Bình',
     priority: 'Trung bình',
-    deadline: '2026-04-13', // 🔥 quá hạn
+    deadline: '2026-04-13',
     status: 'Chưa làm',
     createdBy: 'Admin',
     createdAt: '2026-04-08',
   },
 ];
 
-/**
- * Seed cố định (chỉ chạy 1 lần)
- */
 const ensureSeedData = () => {
   const existing = localStorage.getItem(STORAGE_KEY);
   if (!existing) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(FIXED_DB));
   }
 };
-
-/* =========================
-   DB CORE
-========================= */
 
 const getDB = (): Task[] => {
   try {
@@ -105,23 +86,13 @@ const setDB = (tasks: Task[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 };
 
-/* =========================
-   SERVICE
-========================= */
-
 export const taskService = {
-  /**
-   * Lấy danh sách task
-   */
   async getTasks(): Promise<Task[]> {
     ensureSeedData();
     await sleep();
     return getDB();
   },
 
-  /**
-   * Tạo task mới
-   */
   async createTask(task: Task): Promise<Task> {
     await sleep();
 
@@ -132,9 +103,6 @@ export const taskService = {
     return task;
   },
 
-  /**
-   * Cập nhật task
-   */
   async updateTask(id: string, updates: Partial<Task>): Promise<void> {
     await sleep();
 
@@ -145,9 +113,6 @@ export const taskService = {
     setDB(tasks);
   },
 
-  /**
-   * Xóa task
-   */
   async deleteTask(id: string): Promise<void> {
     await sleep();
 
@@ -155,9 +120,6 @@ export const taskService = {
     setDB(tasks);
   },
 
-  /**
-   * Reset DB về dữ liệu gốc
-   */
   reset(): void {
     setDB(FIXED_DB);
   },
